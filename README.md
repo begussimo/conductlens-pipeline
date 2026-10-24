@@ -6,8 +6,8 @@ CFPB Consumer Complaint Database + FDIC institution register + FRED daily rates
 → Airflow daily (every dbt model is its own task)
 → Hex dashboard answering ten business questions for Compliance, Customer Operations and Product.
 
-Everything runs on free tiers. Dashboard: **_link added once the first scheduled runs are in_**
-(Hex Community app bound to the Databricks replica; see "Why Hex reads Databricks").
+Everything runs on free tiers. Dashboard: **https://app.hex.tech/01a163f8-ca27-778d-b53b-c4897ad7cb97/app/ConductLens-034ldzYONZwINhuDl3OsJu/latest**
+(public Hex app bound to the Databricks replica; see "Why Hex reads Databricks").
 
 ```
 ingestion/   cl-ingest: download → normalise → parquet → version-log upsert into each warehouse
@@ -246,7 +246,7 @@ Scope as specified is two to three weekends. Where the hours went and what is st
 | Airflow stack (Cosmos task groups, 3 DAGs, docker compose) | done; first run green end to end |
 | Provision the free accounts, first loads, first end-to-end Airflow run | done (2026-10-24) |
 | Two unattended scheduled runs, dashboard screenshots | **open, two calendar days** |
-| Hex app (10 questions, public link) | **open, ~half a day** once marts exist |
+| Hex app (10 questions, company selector, 5 charts, honesty panel, public link) | done (2026-10-24) |
 
 What was cut: no CI; the API-only columns stay empty unless the pipeline runs from a US network;
 state population is a static seed rather than a Census API pull; no alerting beyond the

@@ -1,9 +1,12 @@
-# Scheduled runs (generated 2026-10-24 19:48 UTC)
+# Scheduled runs (generated 2026-10-24 19:54 UTC)
 
 ## bigquery
 
 | started (UTC) | run_id | source | mode | status | window | read | written | seconds | error |
 |---|---|---|---|---|---|---:|---:|---:|---|
+| 2026-10-24 19:48 | `manual__first_real_run` | fdic | full | success | full | 27835 | 0 | 5 |  |
+| 2026-10-24 19:48 | `manual__first_real_run` | cfpb | incremental | success | 2026-08-25..2026-10-23 | 150568 | 0 | 30 |  |
+| 2026-10-24 19:48 | `manual__first_real_run` | fred | incremental | success | 2026-07-26..2026-10-24 | 230 | 0 | 6 |  |
 | 2026-10-24 19:30 | `scheduled__2026-10-23T13:00:00+00:00` | fdic | full | success | full | 27835 | 0 | 5 |  |
 | 2026-10-24 19:30 | `scheduled__2026-10-23T13:00:00+00:00` | cfpb | incremental | success | 2026-08-25..2026-10-23 | 150568 | 0 | 37 |  |
 | 2026-10-24 19:30 | `scheduled__2026-10-23T13:00:00+00:00` | fred | incremental | success | 2026-07-26..2026-10-24 | 230 | 0 | 6 |  |
@@ -18,51 +21,54 @@
 
 | checked (UTC) | table | metric | bigquery | databricks | rel diff | status |
 |---|---|---|---:|---:|---:|---|
-| 2026-10-24 19:48 | mart_company_timeliness_monthly | sum_timely_share | 16219.2 | 16219.2 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_digital_vs_chartered | count | 521 | 521 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_digital_vs_chartered | sum_dispute_rate | 0 | 0 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_company_benchmark | count | 4151 | 4151 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_issue_trend_monthly | count | 6245 | 6245 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_company_resolution | count | 1081 | 1081 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_company_resolution | sum_share_of_company | 474 | 474 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_dispute_rate | sum_coverage_share | 0 | 0 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_company_timeliness_monthly | sum_ttm_timely_share | 16279.1 | 16279.1 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_digital_vs_chartered | sum_share_monetary_relief | 39.5327 | 39.5327 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_digital_vs_chartered | sum_timely_share | 513.385 | 513.385 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_rates_lag_correlation | sum_lag_weeks | 3510 | 3510 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_company_match_coverage | sum_share_bank_product_ttm | 1 | 1 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_company_benchmark | sum_rank_in_bucket | 1.61847e+06 | 1.61847e+06 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_product_trend_monthly | sum_yoy_growth | 1488.11 | 1488.11 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_product_trend_monthly | count | 1900 | 1900 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_company_timeliness_monthly | sum_timely_window_days | 255195 | 255195 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_rates_lag_correlation | count | 270 | 270 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_issue_trend_monthly | sum_ttm_growth | 2325.23 | 2325.23 | 0.0000% | ok |
-| 2026-10-24 19:48 | dim_company | count | 8189 | 8189 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_company_benchmark | sum_complaints_per_bn_deposits | 2262.65 | 2262.65 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_digital_vs_chartered | sum_dispute_coverage_share | 0 | 0 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_company_match_coverage | sum_share_all_time | 1 | 1 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_digital_vs_chartered | sum_share_closed_other | 12.9955 | 12.9955 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_dispute_rate | sum_received_year | 8.94538e+07 | 8.94538e+07 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_digital_vs_chartered | sum_share_in_progress | 2.27991 | 2.27991 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_digital_vs_chartered | sum_share_non_monetary_relief | 74.9036 | 74.9036 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_dispute_rate | sum_dispute_rate | 0 | 0 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_rates_lag_correlation | sum_corr_levels | 54.9485 | 54.9485 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_company_resolution | sum_industry_share | 354.427 | 354.427 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_dispute_rate | count | 44282 | 44282 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_rates_lag_correlation | sum_corr_changes | -1.50028 | -1.50028 | 0.0000% | ok |
-| 2026-10-24 19:48 | dim_company | sum_deposits_bn | 17588.4 | 17588.4 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_digital_vs_chartered | sum_share_explanation | 390.607 | 390.607 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_company_match_coverage | sum_share_ttm | 1 | 1 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_digital_vs_chartered | sum_share_untimely | 0.680828 | 0.680828 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_company_timeliness_monthly | count | 17013 | 17013 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_product_trend_monthly | sum_share_of_month | 179 | 179 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_company_match_coverage | count | 4 | 4 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_company_benchmark | sum_deposits_bn | 16260.7 | 16260.7 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_issue_trend_monthly | count | 6245 | 6245 | 0.0000% | ok |
+| 2026-10-24 19:53 | dim_company | count | 8189 | 8189 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_company_benchmark | sum_complaints_per_bn_deposits | 2262.65 | 2262.65 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_company_benchmark | sum_rank_in_bucket | 1.61847e+06 | 1.61847e+06 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_digital_vs_chartered | sum_share_in_progress | 2.27991 | 2.27991 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_digital_vs_chartered | sum_share_non_monetary_relief | 74.9036 | 74.9036 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_dispute_rate | count | 44282 | 44282 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_digital_vs_chartered | count | 521 | 521 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_product_trend_monthly | sum_share_of_month | 179 | 179 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_company_resolution | count | 1081 | 1081 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_company_timeliness_monthly | count | 17013 | 17013 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_rates_lag_correlation | sum_lag_weeks | 3510 | 3510 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_digital_vs_chartered | sum_dispute_rate | 0 | 0 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_company_match_coverage | count | 4 | 4 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_issue_trend_monthly | sum_ttm_growth | 2325.23 | 2325.23 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_dispute_rate | sum_coverage_share | 0 | 0 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_product_trend_monthly | count | 1900 | 1900 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_rates_lag_correlation | count | 270 | 270 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_digital_vs_chartered | sum_share_untimely | 0.680828 | 0.680828 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_product_trend_monthly | sum_yoy_growth | 1488.11 | 1488.11 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_company_match_coverage | sum_share_ttm | 1 | 1 | 0.0000% | ok |
+| 2026-10-24 19:53 | dim_company | sum_deposits_bn | 17588.4 | 17588.4 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_digital_vs_chartered | sum_dispute_coverage_share | 0 | 0 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_company_benchmark | sum_deposits_bn | 16260.7 | 16260.7 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_digital_vs_chartered | sum_share_explanation | 390.607 | 390.607 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_company_match_coverage | sum_share_bank_product_ttm | 1 | 1 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_company_resolution | sum_industry_share | 354.427 | 354.427 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_digital_vs_chartered | sum_share_closed_other | 12.9955 | 12.9955 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_rates_lag_correlation | sum_corr_levels | 54.9485 | 54.9485 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_digital_vs_chartered | sum_timely_share | 513.385 | 513.385 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_company_timeliness_monthly | sum_timely_share | 16219.2 | 16219.2 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_rates_lag_correlation | sum_corr_changes | -1.50028 | -1.50028 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_company_benchmark | count | 4151 | 4151 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_company_match_coverage | sum_share_all_time | 1 | 1 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_digital_vs_chartered | sum_share_monetary_relief | 39.5327 | 39.5327 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_company_timeliness_monthly | sum_timely_window_days | 255195 | 255195 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_dispute_rate | sum_received_year | 8.94538e+07 | 8.94538e+07 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_dispute_rate | sum_dispute_rate | 0 | 0 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_company_timeliness_monthly | sum_ttm_timely_share | 16279.1 | 16279.1 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_company_resolution | sum_share_of_company | 474 | 474 | 0.0000% | ok |
 
 ## databricks
 
 | started (UTC) | run_id | source | mode | status | window | read | written | seconds | error |
 |---|---|---|---|---|---|---:|---:|---:|---|
+| 2026-10-24 19:49 | `manual__first_real_run` | cfpb | incremental | success | 2026-08-24..2026-10-23 | 1322309 | 0 | 28 |  |
+| 2026-10-24 19:49 | `manual__first_real_run` | fdic | full | success | full | 27835 | 0 | 4 |  |
+| 2026-10-24 19:49 | `manual__first_real_run` | fred | incremental | success | 2026-07-26..2026-10-24 | 230 | 0 | 3 |  |
 | 2026-10-24 19:31 | `scheduled__2026-10-23T13:00:00+00:00` | cfpb | incremental | success | 2026-08-24..2026-10-23 | 1322309 | 0 | 26 |  |
 | 2026-10-24 19:30 | `scheduled__2026-10-23T13:00:00+00:00` | fdic | full | success | full | 27835 | 0 | 4 |  |
 | 2026-10-24 19:30 | `scheduled__2026-10-23T13:00:00+00:00` | fred | incremental | success | 2026-07-26..2026-10-24 | 230 | 0 | 4 |  |
@@ -75,43 +81,43 @@
 
 | checked (UTC) | table | metric | bigquery | databricks | rel diff | status |
 |---|---|---|---:|---:|---:|---|
-| 2026-10-24 19:48 | mart_company_benchmark | count | 4151 | 4151 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_digital_vs_chartered | sum_timely_share | 513.385 | 513.385 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_company_timeliness_monthly | sum_timely_share | 16219.2 | 16219.2 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_product_trend_monthly | count | 1900 | 1900 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_company_benchmark | sum_rank_in_bucket | 1.61847e+06 | 1.61847e+06 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_company_resolution | sum_industry_share | 354.427 | 354.427 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_company_match_coverage | sum_share_ttm | 1 | 1 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_company_timeliness_monthly | sum_timely_window_days | 255195 | 255195 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_company_match_coverage | sum_share_all_time | 1 | 1 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_company_match_coverage | sum_share_bank_product_ttm | 1 | 1 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_dispute_rate | count | 44282 | 44282 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_company_resolution | count | 1081 | 1081 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_digital_vs_chartered | sum_share_in_progress | 2.27991 | 2.27991 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_company_resolution | sum_share_of_company | 474 | 474 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_issue_trend_monthly | sum_ttm_growth | 2325.23 | 2325.23 | 0.0000% | ok |
-| 2026-10-24 19:48 | dim_company | count | 8189 | 8189 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_company_match_coverage | count | 4 | 4 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_company_benchmark | sum_complaints_per_bn_deposits | 2262.65 | 2262.65 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_product_trend_monthly | sum_share_of_month | 179 | 179 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_digital_vs_chartered | sum_share_closed_other | 12.9955 | 12.9955 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_product_trend_monthly | sum_yoy_growth | 1488.11 | 1488.11 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_digital_vs_chartered | count | 521 | 521 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_dispute_rate | sum_dispute_rate | 0 | 0 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_company_timeliness_monthly | count | 17013 | 17013 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_dispute_rate | sum_coverage_share | 0 | 0 | 0.0000% | ok |
-| 2026-10-24 19:48 | dim_company | sum_deposits_bn | 17588.4 | 17588.4 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_digital_vs_chartered | sum_share_non_monetary_relief | 74.9036 | 74.9036 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_digital_vs_chartered | sum_share_untimely | 0.680828 | 0.680828 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_digital_vs_chartered | sum_share_monetary_relief | 39.5327 | 39.5327 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_company_benchmark | sum_deposits_bn | 16260.7 | 16260.7 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_rates_lag_correlation | sum_corr_levels | 54.9485 | 54.9485 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_digital_vs_chartered | sum_dispute_rate | 0 | 0 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_issue_trend_monthly | count | 6245 | 6245 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_digital_vs_chartered | sum_dispute_coverage_share | 0 | 0 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_rates_lag_correlation | sum_corr_changes | -1.50028 | -1.50028 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_dispute_rate | sum_received_year | 8.94538e+07 | 8.94538e+07 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_company_timeliness_monthly | sum_ttm_timely_share | 16279.1 | 16279.1 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_digital_vs_chartered | sum_share_explanation | 390.607 | 390.607 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_rates_lag_correlation | count | 270 | 270 | 0.0000% | ok |
-| 2026-10-24 19:48 | mart_rates_lag_correlation | sum_lag_weeks | 3510 | 3510 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_company_benchmark | sum_complaints_per_bn_deposits | 2262.65 | 2262.65 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_digital_vs_chartered | sum_share_explanation | 390.607 | 390.607 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_company_timeliness_monthly | sum_ttm_timely_share | 16279.1 | 16279.1 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_company_benchmark | count | 4151 | 4151 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_digital_vs_chartered | sum_share_in_progress | 2.27991 | 2.27991 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_company_match_coverage | count | 4 | 4 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_issue_trend_monthly | count | 6245 | 6245 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_dispute_rate | count | 44282 | 44282 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_product_trend_monthly | count | 1900 | 1900 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_digital_vs_chartered | count | 521 | 521 | 0.0000% | ok |
+| 2026-10-24 19:53 | dim_company | sum_deposits_bn | 17588.4 | 17588.4 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_company_benchmark | sum_rank_in_bucket | 1.61847e+06 | 1.61847e+06 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_company_resolution | sum_industry_share | 354.427 | 354.427 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_company_match_coverage | sum_share_ttm | 1 | 1 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_rates_lag_correlation | count | 270 | 270 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_dispute_rate | sum_coverage_share | 0 | 0 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_digital_vs_chartered | sum_dispute_rate | 0 | 0 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_digital_vs_chartered | sum_share_untimely | 0.680828 | 0.680828 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_company_timeliness_monthly | sum_timely_share | 16219.2 | 16219.2 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_dispute_rate | sum_received_year | 8.94538e+07 | 8.94538e+07 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_product_trend_monthly | sum_share_of_month | 179 | 179 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_issue_trend_monthly | sum_ttm_growth | 2325.23 | 2325.23 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_digital_vs_chartered | sum_dispute_coverage_share | 0 | 0 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_company_match_coverage | sum_share_bank_product_ttm | 1 | 1 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_company_match_coverage | sum_share_all_time | 1 | 1 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_company_resolution | count | 1081 | 1081 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_company_benchmark | sum_deposits_bn | 16260.7 | 16260.7 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_company_resolution | sum_share_of_company | 474 | 474 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_digital_vs_chartered | sum_timely_share | 513.385 | 513.385 | 0.0000% | ok |
+| 2026-10-24 19:53 | dim_company | count | 8189 | 8189 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_rates_lag_correlation | sum_corr_levels | 54.9485 | 54.9485 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_dispute_rate | sum_dispute_rate | 0 | 0 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_rates_lag_correlation | sum_corr_changes | -1.50028 | -1.50028 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_digital_vs_chartered | sum_share_non_monetary_relief | 74.9036 | 74.9036 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_product_trend_monthly | sum_yoy_growth | 1488.11 | 1488.11 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_digital_vs_chartered | sum_share_closed_other | 12.9955 | 12.9955 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_company_timeliness_monthly | count | 17013 | 17013 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_digital_vs_chartered | sum_share_monetary_relief | 39.5327 | 39.5327 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_company_timeliness_monthly | sum_timely_window_days | 255195 | 255195 | 0.0000% | ok |
+| 2026-10-24 19:53 | mart_rates_lag_correlation | sum_lag_weeks | 3510 | 3510 | 0.0000% | ok |

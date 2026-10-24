@@ -5,7 +5,7 @@ exposures:
     label: ConductLens Hex dashboard
     type: dashboard
     maturity: medium
-    url: https://app.hex.tech/...
+    url: https://app.hex.tech/01a163f8-ca27-778d-b53b-c4897ad7cb97/app/ConductLens-034ldzYONZwINhuDl3OsJu/latest
     description: >
       Public Hex Community app answering the ten ConductLens business questions (volume & trend, service
       quality, benchmarking, risk & early warning, geography). Bound to the Databricks marts; the SQL in

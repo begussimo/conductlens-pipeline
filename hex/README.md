@@ -1,5 +1,12 @@
 # ConductLens Hex app
 
+Published app (anyone with the link can view): https://app.hex.tech/01a163f8-ca27-778d-b53b-c4897ad7cb97/app/ConductLens-034ldzYONZwINhuDl3OsJu/latest
+
+Built on 2026-10-24 as 16 SQL cells (Q1-Q10, company options, honesty panel), a `company` dropdown input
+(default `ALLY FINANCIAL INC.`), an About/time-zone text cell and five chart cells (Q2 stacked area,
+Q3 lines, Q6 horizontal bar with `is_our_company` highlighted, Q7 lines by segment, Q9 lag-correlation
+lines faceted by product group). Q2b, Q5, Q8, Q9a, Q10 and the fintech peer group are tables.
+
 The public dashboard is a Hex (Community plan) app that reads the `conductlens_marts` tables built by
 the dbt project in `../dbt`. Every query it runs is in [`queries.sql`](queries.sql), one block per
 business question, with the chart type and the Hex input parameters in the header comment.
