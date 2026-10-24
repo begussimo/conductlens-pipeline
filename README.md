@@ -22,6 +22,7 @@
 - [Architecture](#architecture)
 - [Ingestion](#ingestion)
 - [Google BigQuery](#google-bigquery)
+- [Why two warehouses](#why-two-warehouses)
 - [dbt](#dbt)
 - [Apache Airflow](#apache-airflow)
 - [Hex dashboard](#hex-dashboard)
@@ -105,12 +106,10 @@ pattern. dbt then rebuilds the staging views and the marts; every model and ever
 Airflow task, so a red box names the model that broke. The marts are the only tables the dashboard
 reads.
 
-**The backup copy.** The BigQuery sandbox is free but every table in it expires after 60 days and
-there is no DML. To make sure the dashboard never goes dark, the pipeline keeps a mirror of the raw
-logs and the marts in a second free warehouse, rebuilds it with the same dbt project, compares the
-two every day, and binds the public app to the mirror. If a BigQuery table expires, the next run
-recreates and reloads it automatically; the dashboard does not notice. That is a resilience detail,
-not the design: BigQuery is the warehouse this README describes.
+**The backup copy.** The BigQuery sandbox is free but every table in it expires after 60 days.
+So the pipeline keeps a second copy of the raw logs and the marts in Databricks Free Edition, where
+tables never expire, and binds the public app to that copy so it never goes dark. See
+[Why two warehouses](#why-two-warehouses).
 
 ## Ingestion
 
@@ -172,6 +171,45 @@ product, and, like every sandbox table, carrying a 60-day expiration that the pi
 5,163,903 cells that sum to exactly 18,653,525 complaints:
 
 ![img](docs/img/bigquery_query.jpg)
+
+## Why two warehouses
+
+The brief asks for BigQuery, and BigQuery is where the pipeline is designed and documented. The
+project runs it as a **sandbox** (no billing account), and the sandbox has one rule that no amount
+of code can bypass: **every table, view and partition is deleted 60 days after it is created**, and
+the expiration cannot be removed. Two more rules shape the design: there is no DML (no `MERGE`,
+`UPDATE` or `DELETE`), and storage is a lifetime 10 GiB budget that deleting data does not refund.
+
+For dbt-managed tables that is survivable, because `CREATE OR REPLACE` every day resets the clock.
+For the raw layer it is not: a table holding years of complaint history would vanish on day 61
+and have to be reloaded from scratch, and every reload spends the lifetime budget again. A public
+dashboard bound to those tables would go dark for the hours between the expiry and the next
+scheduled run, and the history of every load (`_load_runs`, the watermarks) would vanish with it.
+
+So the same ingestion writes a second copy to **Databricks Free Edition**, and the same dbt project
+builds the same marts there:
+
+| | BigQuery sandbox | Databricks Free Edition |
+|---|---|---|
+| Cost | free, no billing account | free |
+| Table lifetime | **60 days, then dropped** | **no expiration; tables persist** |
+| DML | none (load jobs and DDL only) | full `MERGE`, so the version log is a true upsert |
+| Storage | 10 GiB lifetime budget | no comparable cap at this size |
+| Complaint grain held | daily cells (5.2M rows, 0.69 GB) | complaint level (18.65M rows, 421 MB Delta) |
+| Role | the warehouse the brief asks for; rotated and rehydrated automatically | the copy that is always there; what the public app reads |
+
+The two copies are built by one dbt project (`dbt build --target bq` and `--target dbx`), and a
+daily `parity_check` task compares every mart's row count and numeric sums across them; the first
+runs matched 14 of 14. Pointing Hex at Databricks is therefore a connection choice, not a different
+dashboard, and if the BigQuery project ever gets a billing account the app can be rebound without
+changing a query.
+
+The Databricks side, as seen in Catalog Explorer: the fourteen marts, the complaint table with its
+18.65 million rows and liquid clustering on date and company, and the row-count query.
+
+![img](docs/img/databricks_marts_tables.png)
+![img](docs/img/databricks_table_details.jpg)
+![img](docs/img/databricks_query.jpg)
 
 ## dbt
 
@@ -397,6 +435,7 @@ Measured on 2026-10-24.
 | Complaints in the file | 18,653,525, 2011-12-01 → 2026-10-23, 8,189 distinct company strings |
 | BigQuery `cfpb_complaints_daily` first load | 5,163,903 cells = 18,653,525 complaints exactly; ~0.69 GB logical; 10 min |
 | `cfpb_codes` dictionary | 8,189 companies, 178 issues, 86 sub-products, 63 states, 21 products, 8 responses |
+| Databricks `cfpb_complaints` (full history, Delta) | 18,653,525 rows, 421 MB, clustered by `received_date, company`, no expiration |
 | FDIC / FRED | 27,835 institutions / 14,164 observations |
 | Daily incremental run, 60-day window | 150,568 cells read, 0 written when nothing changed |
 | `dbt build` on BigQuery | 14 tables, 9 views, 152 tests in 35 s |
