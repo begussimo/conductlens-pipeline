@@ -1,0 +1,30 @@
+version: 2
+
+exposures:
+  - name: hex_conductlens_dashboard
+    label: ConductLens Hex dashboard
+    type: dashboard
+    maturity: medium
+    url: https://app.hex.tech/...
+    description: >
+      Public Hex Community app answering the ten ConductLens business questions (volume & trend, service
+      quality, benchmarking, risk & early warning, geography). Bound to the Databricks marts; the SQL in
+      `hex/queries.sql` runs unchanged on BigQuery because mart names and columns are identical.
+    owner:
+      name: Begum Koca
+      email: begum@example.com
+    depends_on:
+      - ref('dim_company')
+      - ref('mart_volume_periods')
+      - ref('mart_product_trend_monthly')
+      - ref('mart_issue_trend_monthly')
+      - ref('mart_company_timeliness_monthly')
+      - ref('mart_company_resolution')
+      - ref('mart_dispute_rate')
+      - ref('mart_company_benchmark')
+      - ref('mart_digital_vs_chartered')
+      - ref('mart_weekly_spikes')
+      - ref('mart_rates_weekly')
+      - ref('mart_rates_lag_correlation')
+      - ref('mart_state_complaints')
+      - ref('mart_company_match_coverage')

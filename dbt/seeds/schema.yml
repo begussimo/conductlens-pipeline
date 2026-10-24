@@ -1,0 +1,61 @@
+version: 2
+
+seeds:
+  - name: product_groups
+    description: CFPB product / sub-product pattern -> product_group. `sub_product_pattern` is a lowercase substring matched against lower(sub_product); empty = any sub-product; the longest pattern wins.
+    columns:
+      - name: product
+        description: Verbatim CFPB product.
+        data_tests: [not_null]
+      - name: sub_product_pattern
+        description: Lowercase substring of sub_product, or empty for any.
+      - name: product_group
+        description: Target group.
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['credit_reporting', 'debt_collection', 'mortgage', 'credit_card', 'checking_savings', 'money_transfer', 'crypto', 'bnpl', 'student_loan', 'auto_loan', 'personal_loan', 'prepaid', 'other']
+  - name: company_fdic_map
+    description: >
+      Hand-curated CFPB company -> FDIC holding key for the top ~150 companies by trailing-twelve-month volume.
+      `holding_key` is an FDIC RSSDHCR id or `CERT-<cert>` of the lead charter (resolved to its current holding in
+      `int_company_mapping`). Empty keys mean "not a bank" or "needs manual match" and fall back to the name joins.
+    columns:
+      - name: cfpb_company
+        description: Verbatim CFPB company text.
+        data_tests: [not_null, unique]
+      - name: holding_key
+        description: RSSDHCR id, `CERT-<cert>`, or empty.
+      - name: note
+        description: Why the key is what it is.
+  - name: digital_first_companies
+    description: CFPB companies treated as digital-first (fintech) with a segment.
+    columns:
+      - name: cfpb_company
+        description: Verbatim CFPB company text.
+        data_tests: [not_null, unique]
+      - name: digital_segment
+        description: payments / bnpl / crypto / neobank / brokerage / remittance / lending.
+        data_tests:
+          - accepted_values:
+              values: ['payments', 'bnpl', 'crypto', 'neobank', 'brokerage', 'remittance', 'lending']
+  - name: state_population
+    description: Resident population per state (50 states + DC + PR), US Census Bureau Vintage 2024 estimates (approximate, from memory).
+    columns:
+      - name: state
+        description: Two-letter code.
+        data_tests: [not_null, unique]
+      - name: population
+        description: Resident population estimate (July 1, 2024).
+      - name: source
+        description: Provenance string.
+  - name: state_regions
+    description: Census region and division per state (PR carried as its own region/division).
+    columns:
+      - name: state
+        description: Two-letter code.
+        data_tests: [not_null, unique]
+      - name: region
+        description: Census region.
+      - name: division
+        description: Census division.

@@ -1,0 +1,46 @@
+[project]
+name = "conductlens-pipeline"
+version = "0.1.0"
+description = "CFPB complaints + FDIC + FRED -> BigQuery sandbox & Databricks Free Edition -> dbt -> Hex"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "requests>=2.32,<3",
+    "pyarrow>=17,<20",
+    "duckdb>=1.4,<2",
+    "python-dotenv>=1.0,<2",
+    "google-cloud-bigquery>=3.26,<4",
+    "google-cloud-bigquery-storage>=2.27,<3",
+    "databricks-sdk>=0.40,<1",
+    "databricks-sql-connector>=3.6,<5",
+    "dbt-core>=1.9,<1.11",
+    "dbt-bigquery>=1.9,<1.11",
+    "dbt-databricks>=1.9,<1.11",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8,<9",
+    "ruff>=0.6",
+    "sqlfluff>=3,<4",
+    "sqlfluff-templater-dbt>=3,<4",
+]
+
+[project.scripts]
+cl-ingest = "conductlens_ingest.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["ingestion/conductlens_ingest"]
+
+[tool.uv]
+package = true
+
+[tool.pytest.ini_options]
+testpaths = ["ingestion/tests"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"

@@ -1,0 +1,232 @@
+version: 2
+
+sources:
+  - name: conductlens_raw
+    description: >
+      Append-only version logs written by the `ingestion/` package (ARCHITECTURE §3). A row is never
+      updated or deleted; the business key plus `row_hash` is unique and staging picks the newest
+      `_loaded_at` per business key. Same logical content on BigQuery (dataset) and Databricks (schema).
+    database: "{{ target.database }}"
+    schema: "{{ env_var('CL_BQ_DATASET_PREFIX', 'conductlens') if target.type == 'bigquery' else env_var('CL_DBX_SCHEMA_PREFIX', 'conductlens') }}_raw"
+    loader: cl-ingest
+    loaded_at_field: _loaded_at
+    freshness:
+      warn_after: {count: 36, period: hour}
+      error_after: {count: 72, period: hour}
+    tables:
+      - name: cfpb_complaints
+        description: >
+          CFPB Consumer Complaint Database at complaint grain, one version row per (complaint_id, row_hash).
+          Landed on Databricks (and on BigQuery only when `CL_BQ_CFPB_GRAIN=complaints`). Source: the daily
+          bulk CSV (and the API for `consumer_disputed` / `consumer_consent_provided` / `has_narrative`).
+          The complaint narrative text is never landed. Read by `stg_cfpb_complaints` (Databricks only).
+        columns:
+          - name: complaint_id
+            description: CFPB complaint id (business key).
+          - name: received_date
+            description: CFPB "Date received"; a US-Eastern calendar date with no time. Never converted.
+          - name: received_month_id
+            description: "`year*100+month` of received_date (e.g. 202610). BigQuery integer-range partition key."
+          - name: product
+            description: Verbatim CFPB product text.
+          - name: sub_product
+            description: Verbatim CFPB sub-product text (nullable).
+          - name: issue
+            description: Verbatim CFPB issue text.
+          - name: sub_issue
+            description: Verbatim CFPB sub-issue text (nullable).
+          - name: company
+            description: Verbatim CFPB company free text, e.g. `JPMORGAN CHASE & CO.`.
+          - name: company_public_response
+            description: Optional public response text chosen by the company.
+          - name: state
+            description: Two-letter US state / territory code or null.
+          - name: zip_code
+            description: ZIP code, possibly masked (`326XX`).
+          - name: tags
+            description: "`Servicemember`, `Older American`, both, or null."
+          - name: submitted_via
+            description: Channel (Web, Referral, Phone, Postal mail, Fax, Email).
+          - name: date_sent_to_company
+            description: Date the CFPB forwarded the complaint to the company (nullable).
+          - name: company_response
+            description: "`Closed with explanation`, `Closed with monetary relief`, …, `In progress`, `Untimely response`."
+          - name: timely_response
+            description: "`Yes` / `No` / null; the CFPB's own flag for a response within the 15-day regulatory window."
+          - name: consumer_disputed
+            description: "`Yes` / `No`; API source only, collection stopped 2017-04-24; null otherwise."
+          - name: consumer_consent_provided
+            description: Narrative consent status; API source only.
+          - name: has_narrative
+            description: Whether a narrative exists (API only). The text itself is not landed.
+          - name: row_hash
+            description: First 32 hex chars of sha256 over the business columns.
+          - name: _source
+            description: "`bulk_csv` or `api`."
+          - name: _source_as_of
+            description: Bulk file Last-Modified date (UTC).
+          - name: _loaded_at
+            description: UTC timestamp when this version row was written.
+          - name: _run_id
+            description: Airflow run id or `local-<utc timestamp>`.
+          - name: _is_tombstone
+            description: True when the key disappeared from the source (full-diff mode); business columns are null.
+
+      - name: cfpb_complaints_daily
+        description: >
+          BigQuery default landing of the CFPB log (`CL_BQ_CFPB_GRAIN=daily_cells`, ARCHITECTURE §3.1b): one
+          version row per daily cell (received_date x 8 coded dimensions) with `n_complaints`. Strings are
+          replaced by integer codes that decode through `cfpb_codes`; code 0 means null. Business key = all
+          `*_code` columns + `received_date`; `row_hash` covers `n_complaints` so a changed count creates a new
+          version and a vanished cell a tombstone. ~5.2M cells, ~0.7 GB per 60-day rotation. No `_run_id`.
+        columns:
+          - name: received_date
+            description: CFPB "Date received" (US-Eastern calendar date).
+          - name: received_month_id
+            description: "`year*100+month`; integer-range partition key."
+          - name: company_code
+            description: "`cfpb_codes` code for dimension `company` (0 = null)."
+          - name: product_code
+            description: "`cfpb_codes` code for dimension `product` (0 = null)."
+          - name: sub_product_code
+            description: "`cfpb_codes` code for dimension `sub_product` (0 = null)."
+          - name: issue_code
+            description: "`cfpb_codes` code for dimension `issue` (0 = null)."
+          - name: state_code
+            description: "`cfpb_codes` code for dimension `state` (0 = null)."
+          - name: company_response_code
+            description: "`cfpb_codes` code for dimension `company_response` (0 = null)."
+          - name: timely_response_code
+            description: "`cfpb_codes` code for dimension `timely_response` (0 = null)."
+          - name: consumer_disputed_code
+            description: "`cfpb_codes` code for dimension `consumer_disputed` (0 = null)."
+          - name: n_complaints
+            description: Number of complaints in the cell.
+          - name: row_hash
+            description: First 16 hex chars of sha256 over `n_complaints`.
+          - name: _source
+            description: "`bulk_csv` or `api`."
+          - name: _source_as_of
+            description: Bulk file Last-Modified date (UTC).
+          - name: _loaded_at
+            description: UTC timestamp when this version row was written; joins `_load_runs.started_at..finished_at`.
+          - name: _is_tombstone
+            description: True when the cell disappeared from the source; `n_complaints` is null.
+
+      - name: cfpb_codes
+        description: >
+          Append-only code dictionary for `cfpb_complaints_daily`: one row per (dimension, code) with the
+          verbatim CFPB string. Codes are assigned by ingestion (`max(code)+1` per dimension) and never reused
+          or changed. ~9k rows. Decode with a left join on (dimension = '<column>', code = <column>_code).
+        columns:
+          - name: dimension
+            description: "`company`, `product`, `sub_product`, `issue`, `state`, `company_response`, `timely_response`, `consumer_disputed`."
+          - name: code
+            description: Integer code (never 0; 0 is reserved for null).
+          - name: value
+            description: Verbatim CFPB string.
+          - name: _loaded_at
+            description: UTC timestamp when the code was first written.
+          - name: _run_id
+            description: Airflow run id.
+
+      - name: fdic_institutions
+        description: FDIC BankFind institutions (active and inactive), one version row per (cert, row_hash). Pulled in full every run.
+        columns:
+          - name: cert
+            description: FDIC certificate number (business key).
+          - name: name
+            description: Institution legal name (NAME).
+          - name: city
+            description: Head-office city.
+          - name: stalp
+            description: Head-office state code.
+          - name: bkclass
+            description: FDIC bank class (N, SM, NM, SB, SA, OI).
+          - name: active
+            description: Whether the charter is active.
+          - name: fed_rssd
+            description: Federal Reserve RSSD id of the institution.
+          - name: rssdhcr
+            description: RSSD id of the top holding company; empty when none.
+          - name: namehcr
+            description: Top holding company name.
+          - name: asset_thousands
+            description: Total assets, USD thousands.
+          - name: dep_thousands
+            description: Total deposits, USD thousands.
+          - name: offices
+            description: Number of offices.
+          - name: repdte
+            description: Financials report date.
+          - name: dateupdt
+            description: Last FDIC update date.
+          - name: estymd
+            description: Established date.
+          - name: endefymd
+            description: End-of-existence date (inactive only).
+          - name: webaddr
+            description: Web address.
+          - name: row_hash
+            description: First 32 hex chars of sha256 over the business columns.
+          - name: _source
+            description: "`fdic_api`."
+          - name: _source_as_of
+            description: Run date.
+          - name: _loaded_at
+            description: UTC timestamp when this version row was written.
+          - name: _run_id
+            description: Airflow run id.
+          - name: _is_tombstone
+            description: True when the cert disappeared from the source.
+
+      - name: fred_observations
+        description: FRED observations (DGS10, DFF, DPRIME, MORTGAGE30US, TERMCBCCALLNS), one version row per (series_id, observation_date, row_hash). `.` values are null.
+        columns:
+          - name: series_id
+            description: FRED series id.
+          - name: observation_date
+            description: Observation date.
+          - name: value
+            description: Observed value (percent); null when FRED publishes `.`.
+          - name: row_hash
+            description: First 32 hex chars of sha256 over (series_id, observation_date, value).
+          - name: _source
+            description: "`fred_csv`."
+          - name: _source_as_of
+            description: Run date.
+          - name: _loaded_at
+            description: UTC timestamp when this version row was written.
+          - name: _run_id
+            description: Airflow run id.
+          - name: _is_tombstone
+            description: Always false for FRED.
+
+      - name: _load_runs
+        description: One row per (run, source, sink), written on success and failure by the ingestion package.
+        freshness: null
+        columns:
+          - name: run_id
+            description: Airflow run id or local id.
+          - name: source
+            description: "`cfpb`, `fdic`, `fred`."
+          - name: sink
+            description: "`bigquery`, `databricks`."
+          - name: mode
+            description: "`incremental`, `backfill`, `full_diff`, `rehydrate`."
+          - name: window_start
+            description: Start of the processed date window (null for FDIC).
+          - name: window_end
+            description: End of the processed date window.
+          - name: rows_read
+            description: Rows read from the source in the window.
+          - name: rows_written
+            description: Rows appended (new versions + tombstones).
+          - name: status
+            description: "`success` / `failed`."
+          - name: error
+            description: Error text, truncated to 2000 chars.
+          - name: started_at
+            description: UTC start timestamp.
+          - name: finished_at
+            description: UTC finish timestamp.

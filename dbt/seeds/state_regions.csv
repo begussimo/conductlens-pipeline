@@ -1,0 +1,53 @@
+state,region,division
+AK,West,Pacific
+AL,South,East South Central
+AR,South,West South Central
+AZ,West,Mountain
+CA,West,Pacific
+CO,West,Mountain
+CT,Northeast,New England
+DC,South,South Atlantic
+DE,South,South Atlantic
+FL,South,South Atlantic
+GA,South,South Atlantic
+HI,West,Pacific
+IA,Midwest,West North Central
+ID,West,Mountain
+IL,Midwest,East North Central
+IN,Midwest,East North Central
+KS,Midwest,West North Central
+KY,South,East South Central
+LA,South,West South Central
+MA,Northeast,New England
+MD,South,South Atlantic
+ME,Northeast,New England
+MI,Midwest,East North Central
+MN,Midwest,West North Central
+MO,Midwest,West North Central
+MS,South,East South Central
+MT,West,Mountain
+NC,South,South Atlantic
+ND,Midwest,West North Central
+NE,Midwest,West North Central
+NH,Northeast,New England
+NJ,Northeast,Middle Atlantic
+NM,West,Mountain
+NV,West,Mountain
+NY,Northeast,Middle Atlantic
+OH,Midwest,East North Central
+OK,South,West South Central
+OR,West,Pacific
+PA,Northeast,Middle Atlantic
+PR,Puerto Rico,Puerto Rico
+RI,Northeast,New England
+SC,South,South Atlantic
+SD,Midwest,West North Central
+TN,South,East South Central
+TX,South,West South Central
+UT,West,Mountain
+VA,South,South Atlantic
+VT,Northeast,New England
+WA,West,Pacific
+WI,Midwest,East North Central
+WV,South,South Atlantic
+WY,West,Mountain

@@ -1,0 +1,26 @@
+version: 2
+
+snapshots:
+  - name: snap_fdic_institutions
+    description: >
+      `check`-strategy history of FDIC charters on name, namehcr, rssdhcr, active, dep_thousands and
+      asset_thousands. Databricks only (needs MERGE); disabled on the BigQuery sandbox.
+    columns:
+      - name: cert
+        description: FDIC certificate number (unique key of the snapshot).
+      - name: name
+        description: Institution name (tracked).
+      - name: namehcr
+        description: Holding company name (tracked).
+      - name: rssdhcr
+        description: Holding company RSSD id (tracked).
+      - name: active
+        description: Active flag (tracked).
+      - name: dep_thousands
+        description: Total deposits, USD thousands (tracked).
+      - name: asset_thousands
+        description: Total assets, USD thousands (tracked).
+      - name: dbt_valid_from
+        description: Version start timestamp.
+      - name: dbt_valid_to
+        description: Version end timestamp (null for the current version).

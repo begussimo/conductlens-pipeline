@@ -1,0 +1,3 @@
+# Shared module, not a DAG file. Regex syntax (Airflow default).
+^common\.py$
+__pycache__

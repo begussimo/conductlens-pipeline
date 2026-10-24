@@ -1,0 +1,221 @@
+version: 2
+
+models:
+  - name: int_product_groups
+    description: >
+      Every distinct (product, sub_product) pair seen in the complaints mapped to a `product_group` via the
+      `product_groups` seed (longest matching sub-product pattern wins; empty pattern = any sub-product).
+      Unmatched pairs get `other` with `is_matched = false`; a warn test watches their volume.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [product, sub_product]
+      # Unmatched-volume warning lives in tests/assert_product_groups_matched.sql.
+    columns:
+      - name: product
+        description: Verbatim CFPB product.
+        data_tests:
+          - not_null
+      - name: sub_product
+        description: Verbatim CFPB sub-product (nullable).
+      - name: product_group
+        description: Normalised product group.
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['credit_reporting', 'debt_collection', 'mortgage', 'credit_card', 'checking_savings', 'money_transfer', 'crypto', 'bnpl', 'student_loan', 'auto_loan', 'personal_loan', 'prepaid', 'other']
+      - name: is_matched
+        description: False when no seed row matched and the pair fell back to `other`.
+      - name: matched_pattern
+        description: The seed `sub_product_pattern` that matched (null when the empty/any pattern matched or unmatched).
+      - name: n_complaints
+        description: All-time complaints for the pair (for the unmatched-volume test).
+
+  - name: int_company_mapping
+    description: >
+      One row per CFPB `company` string with the FDIC `holding_key` it maps to and how it was matched
+      (`seed` > `norm_name_holding` > `norm_name_charter` > `unmatched`), plus the digital-first flag.
+    columns:
+      - name: company
+        description: Verbatim CFPB company text; unique.
+        data_tests:
+          - unique
+          - not_null
+      - name: company_name_norm
+        description: Normalised company name used for the name joins.
+      - name: holding_key
+        description: FDIC RSSDHCR id or `CERT-<cert>`; null when unmatched.
+      - name: match_method
+        description: How the holding_key was found.
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['seed', 'norm_name_holding', 'norm_name_charter', 'unmatched']
+      - name: is_matched
+        description: True when `holding_key` is not null.
+      - name: is_digital_first
+        description: True when the company is in the `digital_first_companies` seed.
+      - name: digital_segment
+        description: Segment from the seed (payments, bnpl, crypto, neobank, brokerage, remittance, lending); null otherwise.
+        data_tests:
+          - accepted_values:
+              values: ['payments', 'bnpl', 'crypto', 'neobank', 'brokerage', 'remittance', 'lending']
+      - name: seed_note
+        description: Free-text note from the seed (e.g. `needs manual match`).
+
+  - name: int_fdic_deposits_by_holding
+    description: Active FDIC charters rolled up to `holding_key` with total deposits/assets (USD) and a size bucket.
+    columns:
+      - name: holding_key
+        description: RSSDHCR id or `CERT-<cert>`; unique.
+        data_tests:
+          - unique
+          - not_null
+      - name: holding_name
+        description: Holding-company name (or charter name for standalone charters).
+      - name: is_holding_company
+        description: True when the key is a real holding company (RSSDHCR), false for standalone charters.
+      - name: dep_usd
+        description: Sum of total deposits in USD.
+        data_tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: true
+      - name: asset_usd
+        description: Sum of total assets in USD.
+      - name: deposits_bn
+        description: "`dep_usd / 1e9`."
+      - name: n_charters
+        description: Number of active charters under the key.
+      - name: n_offices
+        description: Total offices.
+      - name: repdte
+        description: Latest financials report date among the charters.
+      - name: size_bucket
+        description: Deposit size bucket.
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['<1B', '1-10B', '10-50B', '50-250B', '>250B']
+
+  - name: int_complaints_daily
+    description: >
+      The one model every mart reads. Grain: received_date x company x product x sub_product x issue x state x
+      company_response x timely_response x consumer_disputed, with `n_complaints`. Databricks: group-by over
+      `stg_cfpb_complaints` (Delta, liquid-clustered by received_date, company). BigQuery: pass-through view of
+      `stg_cfpb_complaints_daily`. Enriched with product group, FDIC mapping, digital-first flag and calendar
+      helpers (`received_week` = Monday).
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [received_date, company, product, sub_product, issue, state, company_response, timely_response, consumer_disputed]
+    columns:
+      - name: received_date
+        description: Received date (US-Eastern calendar date).
+        data_tests:
+          - not_null
+      - name: received_month_id
+        description: "`year*100+month`."
+      - name: received_week
+        description: Monday of the received week.
+        data_tests:
+          - not_null
+      - name: received_month
+        description: First day of the received month.
+      - name: received_year
+        description: Calendar year received.
+      - name: company
+        description: Verbatim company; every value exists in `dim_company`.
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('dim_company')
+              field: company
+      - name: company_name_norm
+        description: Normalised company name.
+      - name: holding_key
+        description: Mapped FDIC holding key (null when unmatched).
+      - name: match_method
+        description: Mapping method.
+        data_tests:
+          - accepted_values:
+              values: ['seed', 'norm_name_holding', 'norm_name_charter', 'unmatched']
+      - name: is_digital_first
+        description: Digital-first flag.
+      - name: digital_segment
+        description: Digital-first segment.
+      - name: product
+        description: Verbatim product.
+      - name: sub_product
+        description: Verbatim sub-product.
+      - name: product_group
+        description: Normalised product group.
+        data_tests:
+          - not_null
+      - name: issue
+        description: Verbatim issue.
+      - name: state
+        description: State code.
+      - name: company_response
+        description: Verbatim response status.
+      - name: response_category
+        description: Normalised response status.
+      - name: timely_response
+        description: "Verbatim `Yes` / `No` / null."
+      - name: is_timely
+        description: CFPB 15-day timeliness flag.
+      - name: consumer_disputed
+        description: "Verbatim `Yes` / `No` / null (pre-2017-04-24 API rows only)."
+      - name: is_disputed
+        description: Consumer disputed flag.
+      - name: n_complaints
+        description: Complaints in the cell (>= 1).
+        data_tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 1
+              inclusive: true
+
+  - name: int_rates_daily
+    description: Daily date spine (history_start_date to today) x FRED series with forward-filled values.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [series_id, date_day]
+    columns:
+      - name: series_id
+        description: FRED series id.
+        data_tests:
+          - not_null
+      - name: date_day
+        description: Calendar day.
+        data_tests:
+          - not_null
+      - name: observed_value
+        description: Value published for exactly this day (null when none).
+      - name: value
+        description: Forward-filled value (null before the first observation of the series).
+      - name: is_observed
+        description: True when the value was observed on this day rather than carried forward.
+
+  - name: int_complaints_weekly
+    description: Week (Monday) x company x product_group x issue complaint counts.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [received_week, company, product_group, issue]
+    columns:
+      - name: received_week
+        description: Monday of the week.
+        data_tests:
+          - not_null
+      - name: company
+        description: Verbatim company.
+        data_tests:
+          - not_null
+      - name: product_group
+        description: Normalised product group.
+      - name: issue
+        description: Verbatim issue.
+      - name: n_complaints
+        description: Complaints in the cell.
+      - name: n_timely
+        description: Complaints flagged timely.
+      - name: n_timely_known
+        description: Complaints with a non-null timeliness flag.

@@ -1,0 +1,5 @@
+# Installed into /opt/airflow/dbt_venv (Cosmos dbt_executable_path), together with
+# the ingestion package from the repo root pyproject.toml. Keep in sync with pyproject.
+dbt-core>=1.9,<1.11
+dbt-bigquery>=1.9,<1.11
+dbt-databricks>=1.9,<1.11

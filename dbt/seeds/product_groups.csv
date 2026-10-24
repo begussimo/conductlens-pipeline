@@ -1,0 +1,32 @@
+product,sub_product_pattern,product_group
+Credit reporting or other personal consumer reports,,credit_reporting
+"Credit reporting, credit repair services, or other personal consumer reports",,credit_reporting
+"Credit reporting, credit repair services, or other personal consumer reports",conventional home mortgage,mortgage
+Credit reporting,,credit_reporting
+Debt collection,,debt_collection
+Mortgage,,mortgage
+Checking or savings account,,checking_savings
+Bank account or service,,checking_savings
+Credit card,,credit_card
+Credit card,"buy now, pay later",bnpl
+Credit card or prepaid card,,credit_card
+Credit card or prepaid card,prepaid,prepaid
+Credit card or prepaid card,gift card,prepaid
+Credit card or prepaid card,government benefit,prepaid
+Credit card or prepaid card,payroll card,prepaid
+Credit card or prepaid card,"buy now, pay later",bnpl
+Prepaid card,,prepaid
+"Money transfer, virtual currency, or money service",,money_transfer
+"Money transfer, virtual currency, or money service",virtual currency,crypto
+Money transfers,,money_transfer
+Virtual currency,,crypto
+Student loan,,student_loan
+Vehicle loan or lease,,auto_loan
+Consumer Loan,,personal_loan
+Consumer Loan,vehicle,auto_loan
+"Payday loan, title loan, personal loan, or advance loan",,personal_loan
+"Payday loan, title loan, personal loan, or advance loan","buy now, pay later",bnpl
+"Payday loan, title loan, or personal loan",,personal_loan
+Payday loan,,personal_loan
+Debt or credit management,,other
+Other financial service,,other

@@ -1,0 +1,36 @@
+# ConductLens dbt profile. Reads ONLY environment variables; no value is ever written here.
+# Targets:
+#   dbx (default) - Databricks Free Edition, durable replica, runs everything incl. the snapshot.
+#   bq            - BigQuery sandbox (no DML, 60-day table expiry, 10 GiB lifetime writes):
+#                   views for staging/intermediate, small tables for marts, no snapshot.
+# Select with DBT_TARGET=bq|dbx or `--target`.
+conductlens:
+  target: "{{ env_var('DBT_TARGET', 'dbx') }}"
+  outputs:
+    bq:
+      type: bigquery
+      # Service-account JSON keyfile (path only; the file itself stays in ./secrets, git-ignored).
+      method: service-account
+      keyfile: "{{ env_var('GOOGLE_APPLICATION_CREDENTIALS') }}"
+      # Alternative: run `gcloud auth application-default login` and replace the two lines above with
+      #   method: oauth
+      # (no keyfile needed; dbt uses the Application Default Credentials).
+      project: "{{ env_var('CL_BQ_PROJECT') }}"
+      # Default dataset for models without a custom schema; generate_schema_name overrides per folder.
+      dataset: "{{ env_var('CL_BQ_DATASET_PREFIX', 'conductlens') }}_staging"
+      location: "{{ env_var('CL_BQ_LOCATION', 'US') }}"
+      threads: 4
+      priority: interactive
+      # Guard rail: refuse any single query that would scan more than 10 GB.
+      maximum_bytes_billed: 10000000000
+      job_execution_timeout_seconds: 600
+      job_retries: 1
+    dbx:
+      type: databricks
+      # dbt-databricks wants the bare hostname; DATABRICKS_HOST may carry the https:// scheme.
+      host: "{{ env_var('DATABRICKS_HOST') | replace('https://', '') | replace('http://', '') }}"
+      http_path: "{{ env_var('DATABRICKS_HTTP_PATH') }}"
+      token: "{{ env_var('DATABRICKS_TOKEN') }}"
+      catalog: "{{ env_var('CL_DBX_CATALOG', 'workspace') }}"
+      schema: "{{ env_var('CL_DBX_SCHEMA_PREFIX', 'conductlens') }}_staging"
+      threads: 4

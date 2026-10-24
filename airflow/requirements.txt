@@ -1,0 +1,5 @@
+# Installed into the AIRFLOW environment (with the Airflow 2.10.5 constraints file).
+# No dbt here on purpose: dbt lives in /opt/airflow/dbt_venv (requirements-dbt.txt).
+# Cosmos' optional extras (dbt-bigquery, dbt-databricks) would pull dbt into this env,
+# so we install the bare package and point ExecutionConfig at the separate venv.
+astronomer-cosmos>=1.9,<2

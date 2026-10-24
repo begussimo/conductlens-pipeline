@@ -1,0 +1,99 @@
+name: conductlens
+version: "0.1.0"
+config-version: 2
+require-dbt-version: [">=1.9.0", "<2.0.0"]
+
+profile: conductlens
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - target
+  - dbt_packages
+
+flags:
+  # Generic-test arguments stay top-level so the project still parses on dbt 1.9 (the `arguments:` property
+  # only exists from 1.10); silence the 1.10 deprecation chatter.
+  warn_error_options:
+    silence:
+      - MissingArgumentsPropertyInGenericTestDeprecation
+      - DeprecationsSummary
+
+vars:
+  # The "our bank" row highlighted in mart_company_benchmark (CFPB spelling of the company).
+  our_company: "{{ env_var('CL_OUR_COMPANY', 'ALLY FINANCIAL INC.') }}"
+  # First month in the CFPB public database.
+  history_start_date: "2011-12-01"
+  # CFPB regulatory window: a company response is "timely" when sent within 15 calendar days.
+  timely_window_days: 15
+  # Sandbox write budget guards (ARCHITECTURE §5): month-grain company marts keep 36 trailing months and
+  # companies with >= 100 TTM complaints; spikes keep 60 trailing weeks and pairs with >= 40 complaints.
+  company_monthly_history_months: 36
+  company_min_complaints_ttm: 100
+  spike_weeks_kept: 60
+  spike_min_window_volume: 40
+  # mart_rates_lag_correlation lags 0..max_lag_weeks.
+  max_lag_weeks: 26
+  rates_corr_start_date: "2012-01-01"
+
+models:
+  conductlens:
+    +persist_docs:
+      relation: true
+      columns: true
+    # Folder defaults; every model also sets materialized=cl_materialized(<default>) in its own
+    # config() so the BigQuery sandbox rule (intermediate -> view) is applied (custom macros cannot be
+    # called from dbt_project.yml because it is rendered before macros are loaded).
+    staging:
+      +schema: staging
+      +materialized: view
+    intermediate:
+      +schema: staging
+      +materialized: table
+    marts:
+      +schema: marts
+      +materialized: table
+
+seeds:
+  conductlens:
+    +schema: staging
+    +persist_docs:
+      relation: true
+    +quote_columns: false
+    company_fdic_map:
+      +column_types:
+        cfpb_company: string
+        holding_key: string
+        note: string
+    digital_first_companies:
+      +column_types:
+        cfpb_company: string
+        digital_segment: string
+    product_groups:
+      +column_types:
+        product: string
+        sub_product_pattern: string
+        product_group: string
+    state_population:
+      +column_types:
+        state: string
+        population: "{{ 'int64' if target.type == 'bigquery' else 'bigint' }}"
+        source: string
+    state_regions:
+      +column_types:
+        state: string
+        region: string
+        division: string
+
+snapshots:
+  conductlens:
+    +schema: snapshots
+
+tests:
+  conductlens:
+    +store_failures: false

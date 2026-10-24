@@ -1,0 +1,620 @@
+version: 2
+
+models:
+  - name: dim_company
+    description: >
+      One row per CFPB company string: FDIC mapping (holding_key, match_method), digital-first flag,
+      deposits/assets and size bucket from FDIC, all-time and trailing-twelve-month complaint counts,
+      peer group and the `is_our_company` highlight (var `our_company`).
+    columns:
+      - name: company
+        description: Verbatim CFPB company text; unique.
+        data_tests:
+          - unique
+          - not_null
+      - name: company_name_norm
+        description: Normalised company name.
+      - name: holding_key
+        description: FDIC RSSDHCR id or `CERT-<cert>`; null when unmatched.
+      - name: holding_name
+        description: FDIC holding-company (or charter) name.
+      - name: match_method
+        description: "`seed`, `norm_name_holding`, `norm_name_charter`, `unmatched`."
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['seed', 'norm_name_holding', 'norm_name_charter', 'unmatched']
+      - name: is_matched
+        description: True when a holding_key exists.
+      - name: is_digital_first
+        description: True when listed in the digital-first seed.
+        data_tests:
+          - not_null
+      - name: digital_segment
+        description: payments / bnpl / crypto / neobank / brokerage / remittance / lending.
+      - name: seed_note
+        description: Note from the company_fdic_map seed.
+      - name: dep_usd
+        description: Total deposits (USD) of the matched holding.
+      - name: asset_usd
+        description: Total assets (USD) of the matched holding.
+      - name: deposits_bn
+        description: Deposits in USD billions.
+      - name: n_charters
+        description: Active charters under the holding.
+      - name: size_bucket
+        description: Deposit size bucket of the holding.
+        data_tests:
+          - accepted_values:
+              values: ['<1B', '1-10B', '10-50B', '50-250B', '>250B']
+      - name: peer_group
+        description: "`chartered` when matched to a holding with deposits > 0, else `fintech_unnormalised`."
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['chartered', 'fintech_unnormalised']
+      - name: complaints_all_time
+        description: All-time complaints.
+      - name: complaints_ttm
+        description: Complaints received in the trailing 365 days.
+      - name: bank_product_complaints_ttm
+        description: TTM complaints on bank products (mortgage, credit card, checking/savings, auto, personal, student, prepaid).
+      - name: first_received_date
+        description: Earliest complaint date.
+      - name: last_received_date
+        description: Latest complaint date.
+      - name: is_our_company
+        description: True for the company named in var `our_company` (env `CL_OUR_COMPANY`).
+        data_tests:
+          - not_null
+
+  - name: mart_volume_periods
+    description: >
+      q1. Industry complaint counts week-to-date, month-to-date and year-to-date (US/Eastern "today")
+      against the same calendar window one year earlier, with `pct_change`. Exactly three rows.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [scope, period_type]
+    columns:
+      - name: scope
+        description: Always `industry` (no company grain).
+        data_tests:
+          - accepted_values:
+              values: ['industry']
+      - name: period_type
+        description: "`week`, `month` or `ytd`."
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['week', 'month', 'ytd']
+      - name: period_start
+        description: Monday of this week / first of the month / January 1st.
+        data_tests:
+          - not_null
+      - name: period_end
+        description: Today in US/Eastern.
+      - name: days_in_period
+        description: Days from period_start to period_end inclusive.
+      - name: complaints_current
+        description: Complaints received in [period_start, period_end].
+        data_tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: true
+      - name: ly_period_start
+        description: period_start minus one year.
+      - name: ly_period_end
+        description: period_end minus one year.
+      - name: complaints_last_year
+        description: Complaints received in [ly_period_start, ly_period_end].
+      - name: pct_change
+        description: "`(current - last_year) / last_year`; null when last year is zero."
+
+  - name: mart_product_trend_monthly
+    description: q2. Month x product_group complaint counts with share of the month and year-over-year growth.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [received_month, product_group]
+    columns:
+      - name: received_month
+        description: First day of the month.
+        data_tests:
+          - not_null
+      - name: product_group
+        description: Normalised product group.
+        data_tests:
+          - not_null
+      - name: complaints
+        description: Complaints in the month for the group.
+      - name: industry_complaints
+        description: All complaints in the month.
+      - name: share_of_month
+        description: "`complaints / industry_complaints`."
+        data_tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1
+              inclusive: true
+      - name: complaints_prior_year
+        description: Complaints for the same month one year earlier.
+      - name: yoy_growth
+        description: "`(complaints - prior) / prior`."
+      - name: is_complete_month
+        description: False for the current (partial) month.
+
+  - name: mart_issue_trend_monthly
+    description: >
+      q2. Month x product_group x issue counts, densified per pair, with trailing-twelve-month and prior-TTM
+      sums and growth so the fastest-growing issues can be ranked. Window: trailing 36 months
+      (var `company_monthly_history_months`) to keep the sandbox table small.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [received_month, product_group, issue]
+    columns:
+      - name: received_month
+        description: First day of the month.
+        data_tests:
+          - not_null
+      - name: product_group
+        description: Normalised product group.
+        data_tests:
+          - not_null
+      - name: issue
+        description: Verbatim CFPB issue.
+        data_tests:
+          - not_null
+      - name: complaints
+        description: Complaints in the month (0 when none).
+      - name: ttm_complaints
+        description: Sum over this month and the 11 preceding.
+      - name: prior_ttm_complaints
+        description: Sum over the 12 months before the TTM window (null until 24 months of history exist).
+      - name: ttm_abs_change
+        description: "`ttm - prior_ttm`."
+      - name: ttm_growth
+        description: "`(ttm - prior_ttm) / prior_ttm`."
+      - name: is_complete_month
+        description: False for the current (partial) month.
+      - name: is_latest_complete_month
+        description: True for last month (the row Hex ranks on).
+
+  - name: mart_company_timeliness_monthly
+    description: >
+      q3. Month x company complaints and timely share (CFPB 15-calendar-day flag, not recomputed), plus a
+      trailing-twelve-month timely share. Window: trailing 36 months (var `company_monthly_history_months`)
+      and only companies with >= 100 TTM complaints (var `company_min_complaints_ttm`).
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [received_month, company]
+    columns:
+      - name: received_month
+        description: First day of the month.
+        data_tests:
+          - not_null
+      - name: company
+        description: Verbatim company.
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('dim_company')
+              field: company
+      - name: complaints
+        description: Complaints in the month.
+      - name: timely_complaints
+        description: Complaints flagged timely.
+      - name: timely_known
+        description: Complaints with a non-null timeliness flag.
+      - name: timely_share
+        description: "`timely_complaints / timely_known`."
+        data_tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1
+              inclusive: true
+      - name: ttm_complaints
+        description: Complaints over this month and the 11 preceding.
+      - name: ttm_timely_share
+        description: Timely share over the trailing 12 months.
+        data_tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1
+              inclusive: true
+      - name: timely_window_days
+        description: The regulatory window the CFPB flag is based on (15).
+      - name: is_complete_month
+        description: False for the current (partial) month.
+
+  - name: mart_company_resolution
+    description: >
+      q4. Trailing-twelve-month response mix per company x response_category with the industry share of the
+      same category. Company rows limited to companies with >= 100 TTM complaints (var
+      `company_min_complaints_ttm`); industry shares use every company.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [company, response_category]
+    columns:
+      - name: company
+        description: Verbatim company.
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('dim_company')
+              field: company
+      - name: response_category
+        description: Normalised response status.
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['explanation', 'monetary_relief', 'non_monetary_relief', 'in_progress', 'closed_other', 'untimely']
+      - name: complaints
+        description: TTM complaints in the category.
+      - name: company_complaints_ttm
+        description: All TTM complaints of the company.
+      - name: share_of_company
+        description: "`complaints / company_complaints_ttm`."
+        data_tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1
+              inclusive: true
+      - name: industry_complaints
+        description: TTM industry complaints in the category.
+      - name: industry_share
+        description: Industry share of the category.
+        data_tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1
+              inclusive: true
+
+  - name: mart_dispute_rate
+    description: >
+      q5. Consumer dispute rate per company x year plus an industry row (`company = 'ALL'`). The disputed
+      flag exists only for API-sourced rows before 2017-04-24, so `coverage_share` is published alongside.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [received_year, company]
+    columns:
+      - name: received_year
+        description: Calendar year received.
+        data_tests:
+          - not_null
+      - name: company
+        description: Verbatim company or `ALL`.
+        data_tests:
+          - not_null
+      - name: is_industry
+        description: True for the `ALL` row.
+      - name: complaints
+        description: Complaints in the year.
+      - name: disputed_known
+        description: Complaints with a non-null disputed flag.
+      - name: disputed_yes
+        description: Complaints the consumer disputed.
+      - name: dispute_rate
+        description: "`disputed_yes / disputed_known`."
+        data_tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1
+              inclusive: true
+      - name: coverage_share
+        description: "`disputed_known / complaints`."
+        data_tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1
+              inclusive: true
+
+  - name: mart_company_benchmark
+    description: >
+      q6. Trailing-twelve-month complaints per company normalised by FDIC deposits for chartered holdings
+      (`complaints_per_bn_deposits`, ranked within `size_bucket`); fintechs and unmatched companies stay in
+      `peer_group = 'fintech_unnormalised'` ranked by raw volume. `is_our_company` highlights var `our_company`.
+    columns:
+      - name: company
+        description: Verbatim company; unique.
+        data_tests:
+          - unique
+          - not_null
+          - relationships:
+              to: ref('dim_company')
+              field: company
+      - name: holding_key
+        description: Matched FDIC holding key.
+      - name: holding_name
+        description: FDIC holding name.
+      - name: match_method
+        description: Mapping method.
+      - name: is_digital_first
+        description: Digital-first flag.
+      - name: digital_segment
+        description: Digital-first segment.
+      - name: peer_group
+        description: "`chartered` or `fintech_unnormalised`."
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['chartered', 'fintech_unnormalised']
+      - name: complaints_ttm
+        description: TTM complaints (> 0 for every row).
+        data_tests:
+          - dbt_utils.accepted_range:
+              min_value: 1
+              inclusive: true
+      - name: bank_product_complaints_ttm
+        description: TTM complaints on bank products.
+      - name: deposits_bn
+        description: Deposits in USD billions (chartered only).
+      - name: complaints_per_bn_deposits
+        description: "`complaints_ttm / deposits_bn` (chartered only)."
+        data_tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: true
+      - name: size_bucket
+        description: Deposit bucket, or `unnormalised` for the fintech peer group.
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['<1B', '1-10B', '10-50B', '50-250B', '>250B', 'unnormalised']
+      - name: rank_in_bucket
+        description: dense_rank within (peer_group, size_bucket); 1 = most complaints per bn deposits (or most complaints).
+        data_tests:
+          - not_null
+      - name: n_in_bucket
+        description: Companies in the bucket.
+      - name: is_our_company
+        description: True for var `our_company`.
+
+  - name: mart_digital_vs_chartered
+    description: q7. Month x segment (digital_first / chartered / other) timely share, dispute rate and response mix.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [received_month, segment]
+    columns:
+      - name: received_month
+        description: First day of the month.
+        data_tests:
+          - not_null
+      - name: segment
+        description: "`digital_first`, `chartered`, `other`."
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['digital_first', 'chartered', 'other']
+      - name: complaints
+        description: Complaints in the month for the segment.
+      - name: timely_share
+        description: Timely share (CFPB flag).
+        data_tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1
+              inclusive: true
+      - name: dispute_rate
+        description: Consumer dispute rate where known.
+        data_tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1
+              inclusive: true
+      - name: dispute_coverage_share
+        description: Share of rows with a non-null disputed flag.
+      - name: share_explanation
+        description: Share closed with explanation.
+      - name: share_monetary_relief
+        description: Share closed with monetary relief.
+      - name: share_non_monetary_relief
+        description: Share closed with non-monetary relief.
+      - name: share_closed_other
+        description: Share closed otherwise (legacy statuses).
+      - name: share_in_progress
+        description: Share still in progress.
+      - name: share_untimely
+        description: Share with an untimely response.
+      - name: is_complete_month
+        description: False for the current (partial) month.
+
+  - name: mart_weekly_spikes
+    description: >
+      q8. Weekly complaint counts per company x issue for the trailing 60 weeks with a z-score against the
+      8 complete weeks preceding each week. `is_spike = z_score > 2 and trailing_8w_avg >= 5`. Pairs with
+      fewer than 40 complaints in the window are dropped (they can never spike by this definition).
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [received_week, company, issue]
+    columns:
+      - name: received_week
+        description: Monday of the week.
+        data_tests:
+          - not_null
+      - name: company
+        description: Verbatim company.
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('dim_company')
+              field: company
+      - name: issue
+        description: Verbatim issue.
+        data_tests:
+          - not_null
+      - name: this_week
+        description: Complaints in the week (0 when none).
+      - name: trailing_8w_avg
+        description: Mean of the 8 preceding weeks (null until 8 weeks exist).
+      - name: trailing_8w_stddev
+        description: Sample standard deviation of the 8 preceding weeks.
+      - name: z_score
+        description: >
+          `(this_week - avg) / greatest(stddev, sqrt(avg), 1)`. The Poisson floor on the denominator keeps a
+          flat 8-week history (stddev 0) from producing an infinite z. Null until 8 prior weeks exist.
+      - name: is_spike
+        description: True when z > 2 and the trailing average is at least 5.
+        data_tests:
+          - not_null
+      - name: is_current_week
+        description: True for the partial current week.
+      - name: is_latest_week
+        description: True for the latest complete week (Hex default filter).
+
+  - name: mart_rates_weekly
+    description: q9. Week x FRED series weekly average rate with weekly mortgage and credit-card complaint counts for charting.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [received_week, series_id]
+    columns:
+      - name: received_week
+        description: Monday of the week.
+        data_tests:
+          - not_null
+      - name: series_id
+        description: FRED series id.
+        data_tests:
+          - not_null
+      - name: avg_rate
+        description: Weekly average of the forward-filled daily rate (percent).
+      - name: min_rate
+        description: Weekly minimum.
+      - name: max_rate
+        description: Weekly maximum.
+      - name: mortgage_complaints
+        description: Mortgage complaints received in the week.
+      - name: credit_card_complaints
+        description: Credit-card complaints received in the week.
+      - name: total_complaints
+        description: All complaints received in the week.
+      - name: is_complete_week
+        description: False for the current week.
+
+  - name: mart_rates_lag_correlation
+    description: >
+      q9. For product_group in (mortgage, credit_card) x FRED series x lag 0..26 weeks: correlation of
+      weekly complaints with the lagged weekly rate (`corr_levels`) and of 4-week log changes in complaints
+      with lagged 4-week rate changes (`corr_changes`). `is_best_lag` marks the max |corr_changes| per pair.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [product_group, series_id, lag_weeks]
+    columns:
+      - name: product_group
+        description: "`mortgage` or `credit_card`."
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['mortgage', 'credit_card']
+      - name: series_id
+        description: FRED series id.
+        data_tests:
+          - not_null
+      - name: lag_weeks
+        description: Weeks the rate is lagged (0-26).
+        data_tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 26
+              inclusive: true
+      - name: n_weeks
+        description: Weeks entering the correlation.
+      - name: corr_levels
+        description: Pearson correlation of weekly complaints with the lagged rate level.
+        data_tests:
+          - dbt_utils.accepted_range:
+              min_value: -1
+              max_value: 1
+              inclusive: true
+      - name: corr_changes
+        description: Pearson correlation of 4-week log change in complaints with lagged 4-week rate change.
+        data_tests:
+          - dbt_utils.accepted_range:
+              min_value: -1
+              max_value: 1
+              inclusive: true
+      - name: is_best_lag
+        description: True for the lag with the largest |corr_changes| per (product_group, series_id).
+        data_tests:
+          - not_null
+
+  - name: mart_state_complaints
+    description: >
+      q10. Trailing-twelve-month complaints per state x product_group with per-100k rates (seed population),
+      share of the state's complaints, and Census region/division. 50 states + DC + PR only.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [state, product_group]
+    columns:
+      - name: state
+        description: Two-letter state code.
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('state_regions')
+              field: state
+      - name: product_group
+        description: Normalised product group.
+        data_tests:
+          - not_null
+      - name: complaints
+        description: TTM complaints for the state and group.
+      - name: state_complaints
+        description: TTM complaints for the state (all groups).
+      - name: share_of_state
+        description: "`complaints / state_complaints`."
+        data_tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1
+              inclusive: true
+      - name: population
+        description: Seed population estimate.
+      - name: per_100k
+        description: Group complaints per 100k residents.
+      - name: state_per_100k
+        description: State complaints per 100k residents.
+      - name: region
+        description: Census region.
+        data_tests:
+          - not_null
+      - name: division
+        description: Census division.
+      - name: population_source
+        description: Provenance of the population figure.
+
+  - name: mart_company_match_coverage
+    description: Honesty table; share of complaints (all-time, TTM, TTM bank products) per company-matching method.
+    columns:
+      - name: match_method
+        description: Mapping method; unique.
+        data_tests:
+          - unique
+          - not_null
+          - accepted_values:
+              values: ['seed', 'norm_name_holding', 'norm_name_charter', 'unmatched']
+      - name: is_matched
+        description: False only for `unmatched`.
+      - name: n_companies
+        description: Distinct companies with the method.
+      - name: complaints_all_time
+        description: All-time complaints.
+      - name: share_all_time
+        description: Share of all-time complaints.
+        data_tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1
+              inclusive: true
+      - name: complaints_ttm
+        description: TTM complaints.
+      - name: share_ttm
+        description: Share of TTM complaints.
+      - name: bank_product_complaints_ttm
+        description: TTM complaints on bank products.
+      - name: share_bank_product_ttm
+        description: Share of TTM bank-product complaints (the 85 % honesty threshold applies to the matched methods combined).
+        data_tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1
+              inclusive: true

@@ -1,0 +1,251 @@
+version: 2
+
+models:
+  - name: stg_cfpb_complaints
+    description: >
+      Databricks only (`enabled: target.type == 'databricks'`); the BigQuery sandbox uses
+      `stg_cfpb_complaints_daily`. Current version of every CFPB complaint (newest `_loaded_at` per `complaint_id`, tombstones removed).
+      Adds `is_timely`, `response_category`, `days_to_forward` and the normalised company name used for
+      FDIC matching. Timeliness is the CFPB's own 15-calendar-day flag; it is not recomputed because the
+      company response date is not published.
+    columns:
+      - name: complaint_id
+        description: CFPB complaint id; unique after deduplication.
+        data_tests:
+          - unique
+          - not_null
+      - name: received_date
+        description: CFPB "Date received" (US-Eastern calendar date). Never in the future.
+        data_tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: "<= {{ cl_today() }}"
+      - name: received_month_id
+        description: "`year*100+month` of `received_date`; consistent with the date by test."
+        data_tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: "= extract(year from received_date) * 100 + extract(month from received_date)"
+      - name: product
+        description: Verbatim CFPB product.
+        data_tests:
+          - not_null
+      - name: sub_product
+        description: Verbatim CFPB sub-product (nullable).
+      - name: issue
+        description: Verbatim CFPB issue.
+      - name: sub_issue
+        description: Verbatim CFPB sub-issue (nullable).
+      - name: company
+        description: Verbatim CFPB company text.
+        data_tests:
+          - not_null
+      - name: company_name_norm
+        description: "`normalize_company_name(company)`: upper-case, punctuation stripped, trailing legal tokens removed."
+      - name: company_public_response
+        description: Optional public response chosen by the company.
+      - name: state
+        description: Two-letter state / territory code or null.
+      - name: zip_code
+        description: ZIP code, possibly masked.
+      - name: tags
+        description: Servicemember / Older American tags.
+      - name: submitted_via
+        description: Submission channel.
+      - name: date_sent_to_company
+        description: Date forwarded to the company; expected on/after `received_date` (warn only).
+        data_tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= received_date"
+              config:
+                severity: warn
+                where: "date_sent_to_company is not null"
+      - name: company_response
+        description: Verbatim CFPB company response status.
+      - name: response_category
+        description: Normalised response status.
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['explanation', 'monetary_relief', 'non_monetary_relief', 'in_progress', 'closed_other', 'untimely']
+      - name: timely_response
+        description: "Verbatim `Yes` / `No` / null."
+      - name: is_timely
+        description: "True when `timely_response = 'Yes'`, false when `'No'`, null otherwise (CFPB 15-day window flag)."
+      - name: consumer_disputed
+        description: "Verbatim `Yes` / `No`; only populated for API-sourced rows before 2017-04-24."
+      - name: is_disputed
+        description: Boolean form of `consumer_disputed`; null when unknown.
+      - name: consumer_consent_provided
+        description: Narrative consent status (API only).
+      - name: has_narrative
+        description: Whether a narrative exists (API only).
+      - name: days_to_forward
+        description: "`date_sent_to_company - received_date` in days (null when not yet forwarded)."
+      - name: _source
+        description: Ingestion source of the current version.
+      - name: _source_as_of
+        description: Bulk-file Last-Modified date of the current version.
+      - name: _loaded_at
+        description: UTC load timestamp of the current version.
+
+  - name: stg_cfpb_complaints_daily
+    description: >
+      BigQuery only (`enabled: target.type == 'bigquery'`). Current version of every daily cell of the CFPB
+      log (`cfpb_complaints_daily`), tombstones removed, the eight coded dimensions decoded through
+      `cfpb_codes` (code 0 = null), with the same derived columns as `stg_cfpb_complaints` and `n_complaints`.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [received_date, company, product, sub_product, issue, state, company_response, timely_response, consumer_disputed]
+    columns:
+      - name: received_date
+        description: CFPB "Date received" (US-Eastern calendar date). Never in the future.
+        data_tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: "<= {{ cl_today() }}"
+      - name: received_month_id
+        description: "`year*100+month` of `received_date`; consistent with the date by test."
+        data_tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: "= extract(year from received_date) * 100 + extract(month from received_date)"
+      - name: product
+        description: Decoded CFPB product.
+        data_tests:
+          - not_null
+      - name: sub_product
+        description: Decoded CFPB sub-product (nullable).
+      - name: issue
+        description: Decoded CFPB issue.
+      - name: company
+        description: Decoded CFPB company text.
+        data_tests:
+          - not_null
+      - name: company_name_norm
+        description: "`normalize_company_name(company)`."
+      - name: state
+        description: Decoded state code or null.
+      - name: company_response
+        description: Decoded company response status.
+      - name: response_category
+        description: Normalised response status.
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['explanation', 'monetary_relief', 'non_monetary_relief', 'in_progress', 'closed_other', 'untimely']
+      - name: timely_response
+        description: "Decoded `Yes` / `No` / null."
+      - name: is_timely
+        description: Boolean form of the CFPB 15-day timeliness flag.
+      - name: consumer_disputed
+        description: "Decoded `Yes` / `No` / null (pre-2017-04-24 API rows only)."
+      - name: is_disputed
+        description: Boolean form of `consumer_disputed`.
+      - name: n_complaints
+        description: Complaints in the cell (always >= 1).
+        data_tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 1
+              inclusive: true
+      - name: _source
+        description: Ingestion source of the current version.
+      - name: _source_as_of
+        description: Bulk-file Last-Modified date of the current version.
+      - name: _loaded_at
+        description: UTC load timestamp of the current version.
+
+  - name: stg_fdic_institutions
+    description: Current version per FDIC charter with deposits/assets in USD and the `holding_key` used to roll charters up to holding companies.
+    columns:
+      - name: cert
+        description: FDIC certificate number; unique.
+        data_tests:
+          - unique
+          - not_null
+      - name: name
+        description: Institution legal name.
+        data_tests:
+          - not_null
+      - name: name_norm
+        description: Normalised institution name (see `normalize_company_name`).
+      - name: city
+        description: Head-office city.
+      - name: stalp
+        description: Head-office state.
+      - name: bkclass
+        description: FDIC bank class.
+      - name: active
+        description: Whether the charter is active.
+      - name: fed_rssd
+        description: Institution RSSD id.
+      - name: rssdhcr
+        description: Top holding company RSSD id; null when none (empty / `0` cleaned to null).
+      - name: namehcr
+        description: Top holding company name.
+      - name: namehcr_norm
+        description: Normalised holding company name.
+      - name: holding_key
+        description: "`rssdhcr` when present else `CERT-<cert>`; the join key to CFPB companies."
+        data_tests:
+          - not_null
+      - name: has_holding_company
+        description: True when the charter reports a top holding company.
+      - name: asset_usd
+        description: Total assets in USD (`asset_thousands * 1000`).
+      - name: dep_usd
+        description: Total deposits in USD (`dep_thousands * 1000`).
+        data_tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+              inclusive: true
+              config:
+                where: "dep_usd is not null"
+      - name: offices
+        description: Number of offices.
+      - name: repdte
+        description: Financials report date.
+      - name: dateupdt
+        description: Last FDIC update date.
+      - name: estymd
+        description: Established date.
+      - name: endefymd
+        description: End-of-existence date (inactive only).
+      - name: webaddr
+        description: Web address.
+      - name: _source
+        description: Ingestion source.
+      - name: _source_as_of
+        description: Run date of the current version.
+      - name: _loaded_at
+        description: UTC load timestamp of the current version.
+
+  - name: stg_fred_observations
+    description: Current version per (series, date) of the FRED rate series; null placeholders removed.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [series_id, observation_date]
+    columns:
+      - name: series_id
+        description: FRED series id.
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['DGS10', 'DFF', 'DPRIME', 'MORTGAGE30US', 'TERMCBCCALLNS']
+              config:
+                severity: warn
+      - name: observation_date
+        description: Observation date.
+        data_tests:
+          - not_null
+      - name: value
+        description: Rate in percent.
+        data_tests:
+          - not_null
+      - name: _source
+        description: Ingestion source.
+      - name: _source_as_of
+        description: Run date of the current version.
+      - name: _loaded_at
+        description: UTC load timestamp.

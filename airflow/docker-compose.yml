@@ -1,0 +1,135 @@
+# ConductLens Airflow stack: Airflow 2.10.5 (LocalExecutor) + Postgres 16 metadata DB.
+# Start from the repo root:  make airflow-up
+#   (= docker compose -f airflow/docker-compose.yml --env-file airflow/.env up -d --build)
+# The build context is the REPO ROOT so the image can `pip install -e` the ingestion
+# package whose pyproject.toml lives there. See airflow/README.md for the layout.
+
+x-airflow-common-env: &airflow-common-env
+  # ---- Airflow core
+  AIRFLOW__CORE__EXECUTOR: LocalExecutor
+  AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+  AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW__CORE__FERNET_KEY:-}
+  AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+  AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+  AIRFLOW__CORE__DEFAULT_TIMEZONE: UTC
+  AIRFLOW__CORE__MAX_ACTIVE_RUNS_PER_DAG: "1"
+  AIRFLOW__SCHEDULER__MIN_FILE_PROCESS_INTERVAL: "60"
+  AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: "true"
+  AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "False"
+  AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW__WEBSERVER__SECRET_KEY:-change-me-in-airflow-dot-env}
+  AIRFLOW__LOGGING__BASE_LOG_FOLDER: /opt/airflow/logs
+  # ---- SMTP (optional). Uncomment + fill in airflow/.env to get email on failure.
+  # The DAGs do NOT depend on email: common.on_failure_callback logs a structured line.
+  # AIRFLOW__SMTP__SMTP_HOST: smtp.example.com
+  # AIRFLOW__SMTP__SMTP_PORT: "587"
+  # AIRFLOW__SMTP__SMTP_STARTTLS: "True"
+  # AIRFLOW__SMTP__SMTP_USER: ${AIRFLOW__SMTP__SMTP_USER:-}
+  # AIRFLOW__SMTP__SMTP_PASSWORD: ${AIRFLOW__SMTP__SMTP_PASSWORD:-}
+  # AIRFLOW__SMTP__SMTP_MAIL_FROM: airflow@example.com
+  # ---- ConductLens container paths (override whatever the host .env says)
+  CL_DATA_DIR: /opt/airflow/data
+  CL_EVIDENCE_DIR: /opt/airflow/evidence
+  GOOGLE_APPLICATION_CREDENTIALS: /opt/airflow/secrets/bq-service-account.json
+  DBT_PROFILES_DIR: /opt/airflow/dbt
+  CL_DBT_PROJECT_DIR: /opt/airflow/dbt
+  CL_DBT_EXECUTABLE: /opt/airflow/dbt_venv/bin/dbt
+  CL_INGEST_BIN: /opt/airflow/dbt_venv/bin/cl-ingest
+  COSMOS_LOAD_METHOD: ${COSMOS_LOAD_METHOD:-dbt_ls}
+
+x-airflow-common: &airflow-common
+  build:
+    context: ..
+    dockerfile: airflow/Dockerfile
+  image: conductlens-airflow:2.10.5
+  # Every CL_* / DATABRICKS_* / DBT_* variable in airflow/.env is injected as-is;
+  # `environment:` wins over env_file, so the container paths above always apply.
+  env_file:
+    - .env
+  environment: *airflow-common-env
+  volumes:
+    - ./dags:/opt/airflow/dags
+    - ./logs:/opt/airflow/logs
+    - ../dbt:/opt/airflow/dbt
+    # live source for the editable install done at build time (see Dockerfile)
+    - ../ingestion:/opt/airflow/repo/ingestion
+    - ../data:/opt/airflow/data
+    - ../evidence:/opt/airflow/evidence
+    - ../secrets:/opt/airflow/secrets:ro
+  user: "${AIRFLOW_UID:-50000}:0"
+  depends_on:
+    postgres:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres-db-volume:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+    restart: always
+
+  airflow-init:
+    <<: *airflow-common
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        mkdir -p /opt/airflow/logs /opt/airflow/data /opt/airflow/evidence
+        airflow db migrate
+        airflow users create \
+          --username "$${_AIRFLOW_WWW_USER_USERNAME}" \
+          --password "$${_AIRFLOW_WWW_USER_PASSWORD}" \
+          --firstname Conduct --lastname Lens --role Admin \
+          --email "$${_AIRFLOW_WWW_USER_EMAIL}" || true
+        echo "airflow-init done"
+    environment:
+      <<: *airflow-common-env
+      _AIRFLOW_WWW_USER_USERNAME: ${_AIRFLOW_WWW_USER_USERNAME:-admin}
+      _AIRFLOW_WWW_USER_PASSWORD: ${_AIRFLOW_WWW_USER_PASSWORD:-admin}
+      _AIRFLOW_WWW_USER_EMAIL: ${_AIRFLOW_WWW_USER_EMAIL:-admin@example.com}
+    restart: "no"
+
+  airflow-webserver:
+    <<: *airflow-common
+    command: webserver
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8974/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres-db-volume:

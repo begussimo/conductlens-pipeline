@@ -1,0 +1,11 @@
+# Ruff settings for airflow/dags. Extends the repo config; the only addition is import
+# classification: the repo has an `airflow/` folder, which makes ruff guess that the
+# `airflow` package is first-party and split its imports. `common` is our module.
+extend = "../pyproject.toml"
+
+[lint]
+extend-select = ["I", "W", "B"]
+
+[lint.isort]
+known-third-party = ["airflow", "cosmos", "pendulum"]
+known-first-party = ["common"]
